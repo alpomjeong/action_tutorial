@@ -1,0 +1,143 @@
+# ============================================================
+# GitHub Actions 워크플로우 기본 구조
+# ============================================================
+
+# 1. name: 워크플로우 이름 (GitHub Actions 탭에 표시됨)
+name: Spring Boot CI
+
+# ============================================================
+# 2. on: 워크플로우 트리거 조건
+# ============================================================
+on:
+  # push 이벤트: 코드가 푸시될 때 실행
+  push:
+    branches:
+      - main
+      - master
+      - 'feature/**'    # feature/login, feature/api 등 모두 매칭
+      - 'feat/**'
+    # paths:            # 특정 경로 변경 시에만 실행 (선택사항)
+    #   - 'src/**'
+    #   - 'build.gradle'
+
+  # pull_request 이벤트: PR 생성/업데이트 시 실행
+  pull_request:
+    branches: [ main, master ]
+
+  # workflow_dispatch: GitHub UI에서 수동 실행 가능
+  workflow_dispatch:
+
+# ============================================================
+# 3. env: 전역 환경 변수 (모든 job에서 사용 가능)
+# ============================================================
+env:
+  JAVA_VERSION: '17'
+  GRADLE_VERSION: '8.5'
+
+# ============================================================
+# 4. jobs: 실행할 작업 정의
+# ============================================================
+jobs:
+  # ----------------------------------------------------------
+  # Job 1: build
+  # ----------------------------------------------------------
+  build:
+    # runs-on: 실행 환경 (ubuntu-latest, windows-latest, macos-latest)
+    runs-on: ubuntu-latest
+
+    # steps: 순차적으로 실행할 단계들
+    steps:
+      # ------------------------------------------------------
+      # Step 1: 코드 체크아웃
+      # uses: 미리 만들어진 액션 사용
+      # ------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        # with:                    # 액션에 전달할 옵션
+        #   fetch-depth: 0         # 전체 히스토리 가져오기 (기본값: 1)
+
+      # ------------------------------------------------------
+      # Step 2: JDK 설정
+      # ------------------------------------------------------
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'  # adoptium, zulu, corretto 등 선택 가능
+
+      # ------------------------------------------------------
+      # Step 3: Gradle 실행 권한 부여
+      # run: 쉘 명령어 직접 실행
+      # ------------------------------------------------------
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # ------------------------------------------------------
+      # Step 4: 캐싱 (빌드 속도 향상)
+      # 이전 빌드의 의존성을 재사용
+      # ------------------------------------------------------
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # ------------------------------------------------------
+      # Step 5: 빌드
+      # ------------------------------------------------------
+      - name: Build with Gradle
+        run: ./gradlew build -x test  # -x test: 테스트 제외 (아래서 별도 실행)
+
+      # ------------------------------------------------------
+      # Step 6: 테스트
+      # ------------------------------------------------------
+      - name: Run tests
+        run: ./gradlew test
+
+      # ------------------------------------------------------
+      # Step 7: 빌드 결과물 업로드 (선택사항)
+      # 다른 job에서 사용하거나 다운로드 가능
+      # ------------------------------------------------------
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: build/libs/*.jar
+          retention-days: 7        # 보관 기간
+
+  # ----------------------------------------------------------
+  # Job 2: test-report (예시 - 테스트 리포트 생성)
+  # ----------------------------------------------------------
+  # test-report:
+  #   runs-on: ubuntu-latest
+  #   needs: build                 # build job 완료 후 실행
+  #   if: always()                 # build 실패해도 실행
+  #   steps:
+  #     - name: Download artifact
+  #       uses: actions/download-artifact@v4
+
+# ============================================================
+# 자주 사용하는 표현식
+# ============================================================
+# ${{ github.ref }}              - 현재 브랜치/태그 (refs/heads/main)
+# ${{ github.sha }}              - 커밋 SHA
+# ${{ github.actor }}            - 실행한 사용자
+# ${{ github.event_name }}       - 이벤트 종류 (push, pull_request)
+# ${{ secrets.MY_SECRET }}       - 저장소 시크릿 값
+# ${{ env.JAVA_VERSION }}        - 환경 변수 참조
+# ${{ runner.os }}               - 실행 환경 OS
+# ${{ hashFiles('**/file') }}    - 파일 해시값
+# ${{ needs.job_id.outputs.x }}  - 이전 job의 출력값
+
+# ============================================================
+# 조건부 실행 (if)
+# ============================================================
+# if: github.ref == 'refs/heads/main'           - main 브랜치만
+# if: contains(github.event.head_commit.message, '[skip ci]') == false
+# if: success()                                  - 이전 step 성공 시
+# if: failure()                                  - 이전 step 실패 시
+# if: always()                                   - 항상 실행
