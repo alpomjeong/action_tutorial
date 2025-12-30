@@ -1,5 +1,33 @@
 # Spring 테스트 모듈화 가이드
 
+> REST API 테스트의 중복을 줄이고 효율적으로 관리하는 3가지 방법
+
+## 문서 정보
+
+| 항목 | 내용 |
+|------|------|
+| **레벨** | 중급 |
+| **예상 읽기 시간** | 20분 |
+| **선행 지식** | Spring Boot 테스트 기초, JUnit 5, MockMvc |
+| **최종 업데이트** | 2025년 1월 |
+
+### 관련 문서
+- [INDEX.md](INDEX.md) - 전체 문서 가이드
+- [GITHUB_ACTIONS_TUTORIAL.md](GITHUB_ACTIONS_TUTORIAL.md) - CI에서 테스트 자동화
+- [SPRING_DOCKER_SETUP.md](SPRING_DOCKER_SETUP.md) - 테스트 환경 설정
+
+---
+
+## 목차
+
+1. [개요](#1-개요)
+2. [방법 1: 테스트 헬퍼 유틸리티](#2-방법-1-테스트-헬퍼-유틸리티)
+3. [방법 2: 추상 클래스 상속](#3-방법-2-추상-클래스-상속)
+4. [방법 3: ParameterizedTest](#4-방법-3-parameterizedtest)
+5. [비교 및 선택 가이드](#5-비교-및-선택-가이드)
+
+---
+
 ## 1. 개요
 
 ### 왜 테스트 모듈화가 필요한가?
@@ -660,3 +688,44 @@ class ApiHealthTest {
 | **ParameterizedTest** | 같은 테스트, 다른 데이터 | `@CsvSource({...})` |
 
 **처음 시작한다면:** 헬퍼 유틸리티부터 도입 → 필요에 따라 확장
+
+---
+
+## 테스트 실행 속도 최적화
+
+### 슬라이스 테스트 사용
+
+```java
+// 전체 컨텍스트 로드 (느림)
+@SpringBootTest
+
+// 웹 레이어만 로드 (빠름)
+@WebMvcTest(UserController.class)
+
+// JPA 레이어만 로드 (빠름)
+@DataJpaTest
+```
+
+### 병렬 실행
+
+```properties
+# src/test/resources/junit-platform.properties
+junit.jupiter.execution.parallel.enabled=true
+junit.jupiter.execution.parallel.mode.default=concurrent
+```
+
+### 테스트 시간 비교
+
+| 설정 | 테스트 10개 실행 시간 |
+|------|---------------------|
+| @SpringBootTest | ~15초 |
+| @WebMvcTest | ~5초 |
+| @WebMvcTest + 병렬 | ~2초 |
+
+---
+
+## 다음 단계
+
+- [GitHub Actions에서 테스트 자동화](GITHUB_ACTIONS_TUTORIAL.md)
+- [Docker 환경에서 테스트 실행](SPRING_DOCKER_SETUP.md)
+- [데이터베이스 선택 가이드](DATABASE_SERVICE_COMPARISON.md)

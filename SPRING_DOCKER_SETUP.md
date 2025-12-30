@@ -1,5 +1,42 @@
 # Spring Boot + Supabase Docker 환경 세팅 가이드
 
+> Spring Boot 프로젝트를 Docker와 Supabase로 구성하는 실전 가이드
+
+## 문서 정보
+
+| 항목 | 내용 |
+|------|------|
+| **레벨** | 초급 ~ 중급 |
+| **예상 읽기 시간** | 20분 |
+| **선행 지식** | Spring Boot 기초, Docker 기본 개념 |
+| **최종 업데이트** | 2025년 1월 |
+
+### 관련 문서
+- [INDEX.md](INDEX.md) - 전체 문서 가이드
+- [DATABASE_SERVICE_COMPARISON.md](DATABASE_SERVICE_COMPARISON.md) - DB 서비스 비교
+- [GITHUB_ACTIONS_TUTORIAL.md](GITHUB_ACTIONS_TUTORIAL.md) - CI/CD 설정
+- [DOCKER_VS_CI_COMPARISON.md](DOCKER_VS_CI_COMPARISON.md) - Docker vs CI 비교
+
+---
+
+## 목차
+
+1. [Supabase 설정](#1-supabase-설정)
+2. [build.gradle 설정](#2-buildgradle-설정)
+3. [Dockerfile](#3-dockerfile)
+4. [Docker Compose](#4-docker-compose)
+5. [환경별 application.yml](#5-환경별-applicationyml)
+6. [개발 시나리오별 실행 방법](#6-개발-시나리오별-실행-방법)
+7. [GitHub Actions](#7-github-actions)
+8. [.env 템플릿](#8-env-템플릿)
+9. [프로젝트 구조](#9-프로젝트-구조)
+10. [Supabase vs 로컬 PostgreSQL 비교](#10-supabase-vs-로컬-postgresql-비교)
+11. [체크리스트](#11-체크리스트)
+12. [빠른 시작](#12-빠른-시작)
+13. [문제 해결](#13-문제-해결)
+
+---
+
 ## 아키텍처
 
 ```
@@ -643,3 +680,96 @@ cp .env.example .env
 docker-compose -f docker-compose.local.yml up -d postgres
 ./gradlew bootRun --args='--spring.profiles.active=local'
 ```
+
+---
+
+## 13. 문제 해결
+
+### 자주 발생하는 오류
+
+#### 1. PostgreSQL 연결 실패
+```
+Connection refused to host: db.xxx.supabase.co
+```
+
+**해결:**
+- Supabase 프로젝트가 활성 상태인지 확인
+- .env 파일의 호스트 주소 확인
+- 방화벽/VPN 설정 확인
+
+#### 2. Gradle 빌드 실패
+```
+Could not resolve org.springframework.boot:spring-boot-starter-web
+```
+
+**해결:**
+```bash
+# Gradle 캐시 삭제 후 재시도
+./gradlew clean build --refresh-dependencies
+```
+
+#### 3. Docker 빌드 시 JAR 파일 없음
+```
+COPY failed: no source files were specified
+```
+
+**해결:**
+```bash
+# Docker 빌드 전 JAR 먼저 생성
+./gradlew build -x test
+docker-compose up --build
+```
+
+#### 4. 포트 충돌
+```
+Bind for 0.0.0.0:5432 failed: port is already allocated
+```
+
+**해결:**
+```bash
+# 기존 PostgreSQL 컨테이너 중지
+docker stop $(docker ps -q --filter ancestor=postgres)
+
+# 또는 다른 포트 사용
+ports:
+  - "5433:5432"  # 호스트 포트 변경
+```
+
+#### 5. application.yml 프로파일 미적용
+```
+No active profile set, falling back to 1 default profile
+```
+
+**해결:**
+```bash
+# 프로파일 명시적 지정
+./gradlew bootRun --args='--spring.profiles.active=dev'
+
+# 또는 환경변수로 설정
+export SPRING_PROFILES_ACTIVE=dev
+./gradlew bootRun
+```
+
+### 디버깅 팁
+
+```bash
+# 1. Supabase 연결 테스트
+psql "postgresql://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres"
+
+# 2. Docker 컨테이너 로그 확인
+docker-compose logs -f app
+
+# 3. Spring Boot 상세 로그
+./gradlew bootRun --args='--spring.profiles.active=dev --debug'
+
+# 4. 환경변수 확인
+docker-compose config
+```
+
+---
+
+## 다음 단계
+
+- [GitHub Actions로 CI/CD 구성하기](GITHUB_ACTIONS_TUTORIAL.md)
+- [Docker vs CI/CD 전략 비교](DOCKER_VS_CI_COMPARISON.md)
+- [테스트 모듈화 전략](SPRING_TEST_MODULARIZATION.md)

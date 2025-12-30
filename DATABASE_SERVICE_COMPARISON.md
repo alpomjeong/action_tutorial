@@ -1,5 +1,38 @@
 # 데이터베이스 서비스 비교: Supabase vs AWS vs Google Cloud
 
+> 클라우드 데이터베이스 서비스 선택을 위한 종합 가이드
+
+## 문서 정보
+
+| 항목 | 내용 |
+|------|------|
+| **레벨** | 초급 ~ 중급 |
+| **예상 읽기 시간** | 25분 |
+| **선행 지식** | SQL 기초, 클라우드 개념 |
+| **최종 업데이트** | 2025년 1월 |
+
+### 관련 문서
+- [INDEX.md](INDEX.md) - 전체 문서 가이드
+- [SPRING_DOCKER_SETUP.md](SPRING_DOCKER_SETUP.md) - Spring + Supabase 연결 설정
+- [DOCKER_VS_CI_COMPARISON.md](DOCKER_VS_CI_COMPARISON.md) - 배포 전략
+
+---
+
+## 목차
+
+1. [가격 비교](#1-가격-비교)
+2. [기능 비교](#2-기능-비교)
+3. [장단점 상세](#3-장단점-상세)
+4. [시나리오별 추천](#4-시나리오별-추천)
+5. [이관 전략](#5-이관-전략)
+6. [비용 시뮬레이션](#6-비용-시뮬레이션)
+7. [결론](#7-결론)
+8. [Supabase를 PostgreSQL 호스팅으로만 쓸 때](#8-supabase를-postgresql-호스팅으로만-쓸-때)
+9. [용어집](#9-용어집)
+10. [무한 피드 앱: MySQL vs PostgreSQL](#10-무한-피드-앱-mysql-vs-postgresql)
+
+---
+
 ## 개요
 
 | 서비스 | 유형 | 핵심 특징 |

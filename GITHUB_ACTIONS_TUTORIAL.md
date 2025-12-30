@@ -1,5 +1,39 @@
 # GitHub Actions 튜토리얼
 
+> GitHub Actions를 활용한 CI/CD 자동화 완벽 가이드
+
+## 문서 정보
+
+| 항목 | 내용 |
+|------|------|
+| **레벨** | 중급 |
+| **예상 읽기 시간** | 15분 |
+| **선행 지식** | Git 기초 (commit, push, branch, PR) |
+| **최종 업데이트** | 2025년 1월 |
+
+### 관련 문서
+- [INDEX.md](INDEX.md) - 전체 문서 가이드
+- [DOCKER_VS_CI_COMPARISON.md](DOCKER_VS_CI_COMPARISON.md) - Docker와 CI/CD 비교
+- [SPRING_DOCKER_SETUP.md](SPRING_DOCKER_SETUP.md) - Docker 환경 설정
+- [SPRING_TEST_MODULARIZATION.md](SPRING_TEST_MODULARIZATION.md) - 테스트 모듈화
+
+---
+
+## 목차
+
+1. [GitHub Actions란?](#1-github-actions란)
+2. [기본 구조](#2-기본-구조)
+3. [트리거 설정](#3-트리거-설정)
+4. [우리 팀의 CI 전략](#4-우리-팀의-ci-전략)
+5. [두 가지 전략 비교](#5-두-가지-전략-비교)
+6. [실전 예제](#6-실전-예제)
+7. [캐싱으로 빌드 속도 향상](#7-캐싱으로-빌드-속도-향상)
+8. [자주 발생하는 문제와 해결](#8-자주-발생하는-문제와-해결)
+9. [추가 학습](#9-추가-학습)
+10. [비용 관리](#10-비용-관리)
+
+---
+
 ## 시나리오
 
 5인 팀이 커뮤니티 웹앱의 백엔드를 Spring Boot로 개발한다.
@@ -437,8 +471,98 @@ if: always()                             # 항상 실행
 - [x] 팀 협업 워크플로우
 
 추가로 학습할 내용:
-- [ ] 캐싱으로 빌드 속도 향상
 - [ ] Docker 이미지 빌드
 - [ ] 자동 배포 (CD)
 - [ ] 슬랙/디스코드 알림 연동
 - [ ] 브랜치 보호 규칙 설정
+
+---
+
+## 7. 캐싱으로 빌드 속도 향상
+
+### Gradle 캐싱 설정
+
+```yaml
+- name: Gradle 캐시
+  uses: actions/cache@v4
+  with:
+    path: |
+      ~/.gradle/caches
+      ~/.gradle/wrapper
+    key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+    restore-keys: |
+      ${{ runner.os }}-gradle-
+```
+
+### 캐싱 효과
+
+| 상태 | 빌드 시간 |
+|------|----------|
+| 캐시 없음 | ~3분 |
+| 캐시 있음 | ~1분 |
+
+### setup-java 내장 캐싱 (더 간단)
+
+```yaml
+- name: JDK 17 설정
+  uses: actions/setup-java@v4
+  with:
+    java-version: '17'
+    distribution: 'temurin'
+    cache: 'gradle'  # 이 한 줄로 캐싱 활성화
+```
+
+---
+
+## 10. 비용 관리
+
+### GitHub Actions 무료 티어
+
+| 플랜 | 월 무료 시간 | 스토리지 |
+|------|------------|----------|
+| Free | 2,000분 | 500MB |
+| Pro | 3,000분 | 1GB |
+| Team | 3,000분 | 2GB |
+
+### 시간 계산
+
+```
+Linux 러너:    1분 = 1분
+macOS 러너:   1분 = 10분
+Windows 러너: 1분 = 2분
+```
+
+### 비용 절감 팁
+
+```yaml
+# 1. 불필요한 트리거 제한
+on:
+  push:
+    paths:
+      - 'src/**'          # src 변경 시만 실행
+      - 'build.gradle'
+    paths-ignore:
+      - '**.md'           # 문서 변경은 무시
+
+# 2. PR만 실행 (push 제외)
+on:
+  pull_request:
+    branches: [main]
+
+# 3. 타임아웃 설정
+jobs:
+  build:
+    timeout-minutes: 10   # 무한 루프 방지
+```
+
+### 사용량 확인
+
+GitHub → Settings → Billing → Actions
+
+---
+
+## 다음 단계
+
+- [Docker 환경 설정](SPRING_DOCKER_SETUP.md)
+- [Docker vs CI/CD 비교](DOCKER_VS_CI_COMPARISON.md)
+- [테스트 모듈화 전략](SPRING_TEST_MODULARIZATION.md)

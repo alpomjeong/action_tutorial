@@ -1,0 +1,190 @@
+# Spring Boot 프로젝트 문서 가이드
+
+> 이 저장소의 문서들을 효과적으로 활용하기 위한 가이드입니다.
+
+---
+
+## 문서 구조
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    1. 데이터베이스 선택                      │
+│                 DATABASE_SERVICE_COMPARISON.md              │
+│            (Supabase vs AWS vs GCP 비교)                    │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  2. 로컬 개발 환경 구성                      │
+│                  SPRING_DOCKER_SETUP.md                     │
+│           (Docker + Spring Boot + PostgreSQL)               │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   3. CI/CD 파이프라인                        │
+│                GITHUB_ACTIONS_TUTORIAL.md                   │
+│              (GitHub Actions 워크플로우)                     │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    4. 배포 전략 선택                         │
+│                DOCKER_VS_CI_COMPARISON.md                   │
+│              (Docker vs CI/CD 비교 분석)                    │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    5. 테스트 전략                            │
+│              SPRING_TEST_MODULARIZATION.md                  │
+│             (테스트 모듈화 및 자동화)                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 상황별 가이드
+
+### 처음 프로젝트에 합류했다면?
+
+```
+1. DATABASE_SERVICE_COMPARISON.md → 용어집 먼저 읽기
+2. SPRING_DOCKER_SETUP.md → 빠른 시작 섹션으로 환경 구성
+3. GITHUB_ACTIONS_TUTORIAL.md → CI 동작 방식 이해
+```
+
+### 데이터베이스를 선택해야 한다면?
+
+| 상황 | 추천 문서 | 참고 섹션 |
+|------|----------|----------|
+| Supabase vs AWS 고민 | DATABASE_SERVICE_COMPARISON.md | 섹션 1-4 |
+| MySQL vs PostgreSQL 고민 | DATABASE_SERVICE_COMPARISON.md | 섹션 10 |
+| 비용 계산 필요 | DATABASE_SERVICE_COMPARISON.md | 섹션 6 |
+
+### 개발 환경을 구성해야 한다면?
+
+| 상황 | 추천 문서 | 참고 섹션 |
+|------|----------|----------|
+| Docker로 로컬 환경 구성 | SPRING_DOCKER_SETUP.md | 섹션 4 |
+| Supabase 연결 설정 | SPRING_DOCKER_SETUP.md | 섹션 1, 5 |
+| 환경별 설정 분리 | SPRING_DOCKER_SETUP.md | 섹션 5 |
+
+### CI/CD를 구성해야 한다면?
+
+| 상황 | 추천 문서 | 참고 섹션 |
+|------|----------|----------|
+| GitHub Actions 처음 | GITHUB_ACTIONS_TUTORIAL.md | 섹션 1-5 |
+| Docker vs CI 차이점 | DOCKER_VS_CI_COMPARISON.md | 섹션 1-3 |
+| 팀 규모별 전략 | DOCKER_VS_CI_COMPARISON.md | 섹션 5 |
+
+### 테스트를 효율화하고 싶다면?
+
+| 상황 | 추천 문서 | 참고 섹션 |
+|------|----------|----------|
+| 테스트 중복 제거 | SPRING_TEST_MODULARIZATION.md | 섹션 3 |
+| 테스트 패턴 비교 | SPRING_TEST_MODULARIZATION.md | 섹션 5 |
+
+---
+
+## 문서 목록
+
+| 문서 | 설명 | 레벨 | 읽기 시간 |
+|------|------|------|----------|
+| [DATABASE_SERVICE_COMPARISON.md](DATABASE_SERVICE_COMPARISON.md) | DB 서비스 비교 (Supabase, AWS, GCP) | 초급 | 25분 |
+| [SPRING_DOCKER_SETUP.md](SPRING_DOCKER_SETUP.md) | Spring + Docker + Supabase 환경 구성 | 초급~중급 | 20분 |
+| [GITHUB_ACTIONS_TUTORIAL.md](GITHUB_ACTIONS_TUTORIAL.md) | GitHub Actions CI/CD 가이드 | 중급 | 15분 |
+| [DOCKER_VS_CI_COMPARISON.md](DOCKER_VS_CI_COMPARISON.md) | Docker와 CI/CD 비교 분석 | 중급 | 15분 |
+| [SPRING_TEST_MODULARIZATION.md](SPRING_TEST_MODULARIZATION.md) | Spring 테스트 모듈화 전략 | 중급 | 20분 |
+
+---
+
+## 선행 지식
+
+### 필수
+- Git 기본 (commit, push, pull, branch)
+- Java/Spring Boot 기초
+- 터미널/CLI 사용법
+
+### 권장
+- Docker 기본 개념
+- REST API 이해
+- SQL 기초
+
+---
+
+## 빠른 시작 (5분)
+
+### 1단계: 저장소 클론
+```bash
+git clone https://github.com/alpomjeong/action_tutorial.git
+cd action_tutorial
+```
+
+### 2단계: 환경 확인
+```bash
+java -version    # Java 17 필요
+./gradlew -v     # Gradle 8.5
+```
+
+### 3단계: 로컬 실행
+```bash
+# H2 인메모리 DB로 바로 실행
+./gradlew bootRun --args='--spring.profiles.active=test'
+```
+
+### 4단계: 테스트 실행
+```bash
+./gradlew test
+```
+
+---
+
+## 문서 기여 가이드
+
+### 새 문서 작성 시 포함할 항목
+
+```markdown
+# 문서 제목
+
+> 한 줄 설명
+
+## 문서 정보
+- **레벨**: 초급 / 중급 / 고급
+- **예상 읽기 시간**: XX분
+- **선행 지식**: 필요한 사전 지식
+- **관련 문서**: 연관된 다른 문서 링크
+
+## 목차
+1. 개요
+2. 본문
+3. 실전 예제
+4. 문제 해결
+5. 참고 자료
+```
+
+---
+
+## 자주 묻는 질문
+
+### Q: 어떤 데이터베이스를 써야 하나요?
+**A**: 개발/학습 단계는 Supabase(무료), 운영 단계는 AWS RDS 추천
+→ [DATABASE_SERVICE_COMPARISON.md](DATABASE_SERVICE_COMPARISON.md) 참고
+
+### Q: Docker 없이 개발 가능한가요?
+**A**: 가능합니다. CI/CD가 잘 구성되어 있으면 로컬은 직접 설치로 개발해도 됩니다.
+→ [DOCKER_VS_CI_COMPARISON.md](DOCKER_VS_CI_COMPARISON.md) 참고
+
+### Q: 테스트 코드 중복이 너무 많아요
+**A**: CrudControllerTest 추상 클래스 상속 방식을 추천합니다.
+→ [SPRING_TEST_MODULARIZATION.md](SPRING_TEST_MODULARIZATION.md) 참고
+
+---
+
+## 문서 업데이트 이력
+
+| 날짜 | 문서 | 변경 내용 |
+|------|------|----------|
+| 2025-01-01 | 전체 | 문서 품질 개선 및 연결성 강화 |
+| 2025-01-01 | INDEX.md | 신규 생성 |
+| 2025-01-01 | DATABASE_SERVICE_COMPARISON.md | MySQL vs PostgreSQL 비교 추가 |
