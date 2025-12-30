@@ -46,6 +46,13 @@
 │                    6. 테스트 전략                            │
 │              SPRING_TEST_MODULARIZATION.md                  │
 │             (테스트 모듈화 및 자동화)                        │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   7. API 문서화                              │
+│                   SWAGGER_TUTORIAL.md                       │
+│             (Swagger/OpenAPI 3.0 적용)                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -97,6 +104,16 @@
 | 테스트 중복 제거 | SPRING_TEST_MODULARIZATION.md | 섹션 3 |
 | 테스트 패턴 비교 | SPRING_TEST_MODULARIZATION.md | 섹션 5 |
 
+### API 문서화가 필요하다면?
+
+| 상황 | 추천 문서 | 참고 섹션 |
+|------|----------|----------|
+| Swagger 기본 설정 | SWAGGER_TUTORIAL.md | 섹션 1-3 |
+| 컨트롤러 어노테이션 | SWAGGER_TUTORIAL.md | 섹션 4-6 |
+| JWT 인증 설정 | SWAGGER_TUTORIAL.md | 섹션 7 |
+| API 그룹화 | SWAGGER_TUTORIAL.md | 섹션 8 |
+| 운영 환경 비활성화 | SWAGGER_TUTORIAL.md | 섹션 9 |
+
 ---
 
 ## 문서 목록
@@ -109,6 +126,7 @@
 | [GITHUB_ACTIONS_TUTORIAL.md](GITHUB_ACTIONS_TUTORIAL.md) | GitHub Actions CI/CD 가이드 | 중급 | 15분 |
 | [DOCKER_VS_CI_COMPARISON.md](DOCKER_VS_CI_COMPARISON.md) | Docker와 CI/CD 비교 분석 | 중급 | 15분 |
 | [SPRING_TEST_MODULARIZATION.md](SPRING_TEST_MODULARIZATION.md) | Spring 테스트 모듈화 전략 | 중급 | 20분 |
+| [SWAGGER_TUTORIAL.md](SWAGGER_TUTORIAL.md) | Swagger/OpenAPI 3.0 적용 가이드 | 초급~중급 | 35분 |
 
 ---
 
@@ -198,6 +216,7 @@ java -version    # Java 17 필요
 
 | 날짜 | 문서 | 변경 내용 |
 |------|------|----------|
+| 2025-01-01 | SWAGGER_TUTORIAL.md | Swagger/OpenAPI 튜토리얼 신규 생성 |
 | 2025-01-01 | POSTGRESQL_TUTORIAL.md | PostgreSQL 입문 튜토리얼 신규 생성 |
 | 2025-01-01 | SPRING_DOCKER_SETUP.md | Supabase → AWS RDS PostgreSQL로 변경 |
 | 2025-01-01 | 전체 | 문서 품질 개선 및 연결성 강화 |
