@@ -341,3 +341,166 @@ Phase 3 (대규모):       AWS RDS + Read Replica + Multi-AZ
 ```
 
 **JPA 사용 시 이관은 URL 변경만으로 가능** → 처음엔 Supabase로 빠르게, 나중에 필요 시 이관
+
+---
+
+## 8. Supabase를 PostgreSQL 호스팅으로만 쓸 때
+
+### Spring Boot 백엔드에서 PostgREST 안 쓰면?
+
+| Supabase 기능 | Spring 백엔드 시 사용 여부 |
+|--------------|-------------------------|
+| PostgreSQL DB | ✅ 사용 |
+| PostgREST (자동 API) | ❌ 안 씀 (Spring API 직접 개발) |
+| Auth | ❌ 안 씀 (Spring Security) |
+| Storage | ❌ 안 씀 (S3/R2) |
+| Realtime | ❌ 안 씀 |
+| Edge Functions | ❌ 안 씀 |
+
+**→ 결국 PostgreSQL 호스팅만 사용**
+
+### 그래도 Supabase 쓸 이유
+
+| 장점 | 설명 |
+|------|------|
+| **무료 500MB** | 개발/학습 단계에서 비용 0 |
+| **5분 설정** | AWS RDS는 VPC, 보안그룹 등 설정 복잡 |
+| **웹 SQL 에디터** | 별도 툴 없이 쿼리 가능 |
+| **대시보드** | 테이블 구조 시각화 |
+
+### 비교: PostgreSQL만 쓸 때
+
+| 항목 | Supabase | AWS RDS | 로컬 Docker |
+|------|----------|---------|-------------|
+| 무료 | 500MB | 12개월만 | 완전 무료 |
+| 설정 시간 | 5분 | 30분+ | 10분 |
+| 관리 | 자동 | 수동 | 수동 |
+| 접근성 | 어디서든 | 어디서든 | 로컬만 |
+
+### 결론
+
+```
+PostgREST 안 쓰면?
+→ Supabase = 그냥 "무료 PostgreSQL 호스팅"
+
+메리트가 떨어지나?
+→ 개발 단계: 아니오 (무료 + 간편)
+→ 운영 단계: 맞음 (AWS RDS가 더 나음)
+```
+
+### 실용적 판단
+
+| 상황 | 추천 |
+|------|------|
+| 개발/학습 중 | Supabase (무료니까) |
+| 팀 개발 (공유 DB 필요) | Supabase (설정 쉬움) |
+| 운영 배포 | AWS RDS (가성비) |
+| 오프라인 개발 | 로컬 Docker |
+
+**핵심:**
+```
+개발 단계 → Supabase (무료 호스팅으로만 활용)
+운영 단계 → AWS RDS로 이관 (어차피 URL만 변경)
+
+"무료 PostgreSQL 호스팅"으로만 써도
+개발 단계에선 충분히 가치 있음
+```
+
+---
+
+## 9. 용어집
+
+### 데이터베이스 관련
+
+| 용어 | 설명 |
+|------|------|
+| **PostgreSQL** | 오픈소스 관계형 데이터베이스. MySQL보다 기능이 풍부함 (JSON, Array 등) |
+| **MySQL** | 가장 널리 쓰이는 오픈소스 관계형 데이터베이스 |
+| **RDS** | Relational Database Service. AWS의 관리형 DB 서비스 |
+| **Read Replica** | 읽기 전용 복제본. 읽기 부하 분산용 |
+| **Multi-AZ** | Multiple Availability Zone. 다른 데이터센터에 복제본 유지 (고가용성) |
+| **Point-in-time Recovery** | 특정 시점으로 DB 복구 가능한 기능 |
+| **Connection Pooling** | DB 연결을 미리 만들어두고 재사용 (성능 향상) |
+| **pg_dump** | PostgreSQL 백업 명령어 |
+
+### Supabase 관련
+
+| 용어 | 설명 |
+|------|------|
+| **PostgREST** | PostgreSQL 테이블을 자동으로 REST API로 노출하는 도구 |
+| **Supabase Auth** | Supabase 내장 인증 시스템 (소셜 로그인, JWT 등) |
+| **Supabase Storage** | Supabase 내장 파일 저장소 (S3 호환) |
+| **Supabase Realtime** | 실시간 데이터 변경 구독 기능 (WebSocket 기반) |
+| **Edge Functions** | Supabase의 서버리스 함수 (Deno 런타임) |
+| **BaaS** | Backend as a Service. 백엔드 기능을 서비스로 제공 |
+
+### AWS 관련
+
+| 용어 | 설명 |
+|------|------|
+| **EC2** | Elastic Compute Cloud. 가상 서버 |
+| **S3** | Simple Storage Service. 객체 스토리지 (파일 저장) |
+| **Lambda** | 서버리스 함수 실행 서비스 |
+| **Cognito** | AWS의 인증/사용자 관리 서비스 |
+| **VPC** | Virtual Private Cloud. 가상 네트워크 |
+| **IAM** | Identity and Access Management. 권한 관리 |
+| **CloudWatch** | AWS 모니터링/로깅 서비스 |
+
+### Google Cloud 관련
+
+| 용어 | 설명 |
+|------|------|
+| **GCP** | Google Cloud Platform |
+| **Cloud SQL** | GCP의 관리형 DB 서비스 |
+| **BigQuery** | GCP의 데이터 분석용 데이터웨어하우스 |
+| **GKE** | Google Kubernetes Engine. 관리형 쿠버네티스 |
+| **Cloud Storage** | GCP의 객체 스토리지 |
+| **Cloud Functions** | GCP의 서버리스 함수 |
+| **Firebase** | GCP의 모바일/웹 앱 개발 플랫폼 |
+
+### Spring / Java 관련
+
+| 용어 | 설명 |
+|------|------|
+| **JPA** | Java Persistence API. 자바 ORM 표준 인터페이스 |
+| **Hibernate** | JPA 구현체. 가장 널리 쓰임 |
+| **JDBC** | Java Database Connectivity. 자바 DB 연결 표준 |
+| **HikariCP** | 고성능 JDBC Connection Pool (Spring Boot 기본) |
+| **Spring Security** | Spring의 인증/인가 프레임워크 |
+| **application.yml** | Spring Boot 설정 파일 |
+
+### DevOps / 인프라 관련
+
+| 용어 | 설명 |
+|------|------|
+| **Docker** | 컨테이너 가상화 플랫폼 |
+| **Kubernetes (K8s)** | 컨테이너 오케스트레이션 도구 |
+| **CI/CD** | Continuous Integration / Continuous Deployment |
+| **SLA** | Service Level Agreement. 서비스 가용성 보장 계약 |
+| **고가용성 (HA)** | High Availability. 장애 시에도 서비스 유지 |
+| **스케일링** | 서버 성능/개수를 늘리거나 줄이는 것 |
+| **리전 (Region)** | 클라우드 데이터센터 위치 (서울, 도쿄 등) |
+| **온프레미스** | 자체 데이터센터에 서버 구축 (클라우드 반대) |
+
+### 비용 관련
+
+| 용어 | 설명 |
+|------|------|
+| **무료 티어** | 무료로 사용 가능한 범위 |
+| **이그레스 (Egress)** | 서버에서 외부로 나가는 데이터 전송 (보통 유료) |
+| **인그레스 (Ingress)** | 외부에서 서버로 들어오는 데이터 전송 (보통 무료) |
+| **vCPU** | 가상 CPU 코어 수 |
+| **프리 티어** | Free Tier. 무료 사용 범위 |
+| **온디맨드** | 사용한 만큼 과금되는 방식 |
+| **예약 인스턴스** | 1~3년 약정 시 할인받는 방식 |
+
+### 기타
+
+| 용어 | 설명 |
+|------|------|
+| **Vendor Lock-in** | 특정 서비스에 종속되어 이관이 어려워지는 상태 |
+| **MVP** | Minimum Viable Product. 최소 기능 제품 |
+| **MAU** | Monthly Active Users. 월간 활성 사용자 수 |
+| **오픈소스** | 소스 코드가 공개된 소프트웨어 |
+| **Self-hosting** | 직접 서버에 설치해서 운영하는 방식 |
+| **관리형 (Managed)** | 클라우드 업체가 운영/관리해주는 서비스 |
