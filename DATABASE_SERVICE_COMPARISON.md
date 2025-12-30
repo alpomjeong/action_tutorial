@@ -504,3 +504,116 @@ PostgREST 안 쓰면?
 | **오픈소스** | 소스 코드가 공개된 소프트웨어 |
 | **Self-hosting** | 직접 서버에 설치해서 운영하는 방식 |
 | **관리형 (Managed)** | 클라우드 업체가 운영/관리해주는 서비스 |
+
+---
+
+## 10. 무한 피드 앱: MySQL vs PostgreSQL
+
+### 결론: PostgreSQL 추천
+
+커뮤니티/SNS 앱에서 무한 스크롤 피드 구현 시 PostgreSQL이 더 적합하다.
+
+### 기능 비교
+
+| 기능 | PostgreSQL | MySQL |
+|------|-----------|-------|
+| **커서 기반 페이지네이션** | ✅ 최적화 잘됨 | ⚠️ 가능하지만 덜 효율적 |
+| **JSONB (유연한 데이터)** | ✅ 네이티브 | ⚠️ JSON 있지만 성능 낮음 |
+| **전문 검색 (Full-text)** | ✅ 내장 (강력) | ⚠️ 기본적 수준 |
+| **Array 타입** | ✅ 태그, 멘션 저장 | ❌ 없음 |
+| **인덱스 종류** | GIN, GiST, BRIN 등 다양 | B-Tree 위주 |
+
+### 무한 피드 핵심: 페이지네이션
+
+#### ❌ Offset 방식 (느림)
+```sql
+-- 페이지 깊어질수록 느려짐
+SELECT * FROM posts ORDER BY created_at DESC LIMIT 20 OFFSET 10000;
+```
+
+#### ✅ 커서 방식 (빠름)
+```sql
+-- PostgreSQL에서 최적화 잘됨
+SELECT * FROM posts
+WHERE created_at < '2025-01-01 12:00:00'
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+**PostgreSQL**은 이런 쿼리에서 인덱스 활용이 더 효율적
+
+### 트위터형 기능별 비교
+
+| 기능 | PostgreSQL | MySQL |
+|------|-----------|-------|
+| **타임라인 피드** | ✅ | ✅ |
+| **해시태그 검색** | ✅ Array + GIN 인덱스 | ⚠️ 별도 테이블 필요 |
+| **멘션 (@user)** | ✅ Array 저장 | ⚠️ 별도 테이블 |
+| **게시글 검색** | ✅ Full-text 내장 | ⚠️ Elasticsearch 권장 |
+| **좋아요 카운트** | ✅ | ✅ |
+| **리트윗/인용** | ✅ | ✅ |
+
+### PostgreSQL 실제 활용 예시
+
+```sql
+-- 게시글 테이블
+CREATE TABLE posts (
+    id BIGSERIAL PRIMARY KEY,
+    content TEXT,
+    hashtags TEXT[],           -- 배열로 태그 저장
+    mentions TEXT[],           -- 멘션된 유저들
+    metadata JSONB,            -- 유연한 추가 데이터
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 해시태그 검색용 인덱스
+CREATE INDEX idx_hashtags ON posts USING GIN(hashtags);
+
+-- 전문 검색용 인덱스
+CREATE INDEX idx_content_search ON posts USING GIN(to_tsvector('korean', content));
+```
+
+```sql
+-- 해시태그로 검색
+SELECT * FROM posts WHERE hashtags @> ARRAY['개발'];
+
+-- 전문 검색
+SELECT * FROM posts WHERE to_tsvector('korean', content) @@ to_tsquery('스프링');
+```
+
+**MySQL에서는 이런 게 안 되거나 복잡함**
+
+### 대규모 서비스 사례
+
+| 서비스 | DB |
+|--------|-----|
+| Twitter | MySQL (초기) → 자체 분산 시스템 |
+| Instagram | PostgreSQL |
+| Discord | PostgreSQL (Cassandra 병행) |
+| Reddit | PostgreSQL |
+| Notion | PostgreSQL |
+
+**SNS/커뮤니티 = PostgreSQL이 대세**
+
+### MySQL이 나은 경우
+
+```
+- 단순 CRUD 위주
+- 이미 MySQL 경험 많음
+- 레거시 시스템 연동
+- 읽기 복제본 설정 익숙
+```
+
+### 최종 추천
+
+```
+무한 피드 커뮤니티 앱
+→ PostgreSQL
+
+이유:
+1. 커서 페이지네이션 최적화
+2. 해시태그/멘션 = Array로 간단히
+3. 검색 = Full-text 내장
+4. JSONB = 유연한 확장
+5. Supabase/AWS RDS 둘 다 지원
+```
