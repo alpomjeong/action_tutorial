@@ -1,4 +1,28 @@
-# Spring Boot Docker 환경 세팅 가이드
+# Spring Boot + Supabase Docker 환경 세팅 가이드
+
+## 아키텍처
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Spring Boot (백엔드)                  │
+│                    - REST API                           │
+│                    - 비즈니스 로직                       │
+└─────────────────────┬───────────────────────────────────┘
+                      │ JDBC (PostgreSQL)
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│                    Supabase                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │ PostgreSQL  │  │    Auth     │  │   Storage   │     │
+│  │   (DB)      │  │   (인증)    │  │  (파일)     │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘     │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Spring Boot**: 비즈니스 로직, API 개발
+**Supabase**: PostgreSQL DB 호스팅 (+ 인증, 스토리지 옵션)
+
+---
 
 ## 버전 기준 (2025년 현업 표준)
 
@@ -7,30 +31,86 @@
 | Spring Boot | 3.2.x | 최신 안정 |
 | Java | 17 (LTS) | Temurin 권장 |
 | Gradle | 8.5+ | Spring Boot 3.2 요구 |
-| MySQL | 8.0 | LTS |
-| Redis | 7.x | 최신 안정 |
+| PostgreSQL | 15.x | Supabase 기본 |
+| Redis | 7.x | 캐시용 (선택) |
 
 ---
 
-## 1. Dockerfile
+## 1. Supabase 설정
 
-### 1.1 기본 Dockerfile
+### 1.1 Supabase 프로젝트 생성
 
-```dockerfile
-FROM eclipse-temurin:17-jdk-alpine
+1. https://supabase.com 접속
+2. New Project 생성
+3. 프로젝트 Settings → Database에서 연결 정보 확인:
 
-WORKDIR /app
-
-COPY build/libs/*.jar app.jar
-
-EXPOSE 8080
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+Host:     db.<project-ref>.supabase.co
+Port:     5432
+Database: postgres
+User:     postgres
+Password: [프로젝트 생성 시 설정한 비밀번호]
 ```
 
-### 1.2 멀티스테이지 빌드 (권장)
+### 1.2 Connection String
 
-빌드와 실행 환경을 분리하여 이미지 크기 최소화.
+```
+# Direct Connection (권장)
+jdbc:postgresql://db.<project-ref>.supabase.co:5432/postgres
+
+# Connection Pooler (동시 연결 많을 때)
+jdbc:postgresql://db.<project-ref>.supabase.co:6543/postgres?pgbouncer=true
+```
+
+---
+
+## 2. build.gradle 설정
+
+```groovy
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.2.0'
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = '17'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // PostgreSQL (Supabase)
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'com.h2database:h2'  // 테스트용 인메모리 DB
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+```
+
+---
+
+## 3. Dockerfile
+
+### 3.1 멀티스테이지 빌드 (권장)
 
 ```dockerfile
 # Stage 1: Build
@@ -70,25 +150,19 @@ EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-### 1.3 이미지 크기 비교
-
-| 방식 | 이미지 크기 |
-|------|------------|
-| 기본 (JDK 포함) | ~400MB |
-| 멀티스테이지 (JRE만) | ~200MB |
-| Alpine + JRE | ~150MB |
-
 ---
 
-## 2. Docker Compose
+## 4. Docker Compose
 
-### 2.1 개발 환경 (docker-compose.yml)
+### 4.1 로컬 개발 - Supabase 직접 연결
+
+Supabase 클라우드에 직접 연결 (DB 설치 불필요).
 
 ```yaml
+# docker-compose.yml
 version: '3.8'
 
 services:
-  # Spring Boot 애플리케이션
   app:
     build:
       context: .
@@ -97,86 +171,60 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/community
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
-      - SPRING_REDIS_HOST=redis
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - app-network
-
-  # MySQL 8.0
-  mysql:
-    image: mysql:8.0
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: community
-      TZ: Asia/Seoul
-    volumes:
-      - mysql-data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # 초기화 SQL
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - app-network
-
-  # Redis 7
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - app-network
-
-volumes:
-  mysql-data:
-  redis-data:
-
-networks:
-  app-network:
-    driver: bridge
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST}
+      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
+    env_file:
+      - .env
 ```
 
-### 2.2 개발용 (로컬 코드 마운트)
+**.env 파일 (gitignore에 추가)**:
+```env
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_DB_HOST=db.<project-ref>.supabase.co
+SUPABASE_DB_PASSWORD=your-database-password
+```
+
+### 4.2 로컬 개발 - PostgreSQL Docker (오프라인 개발)
+
+Supabase 없이 로컬 PostgreSQL로 개발.
 
 ```yaml
+# docker-compose.local.yml
 version: '3.8'
 
 services:
-  # 로컬 개발 시 DB만 Docker로
-  mysql:
-    image: mysql:8.0
+  # 로컬 PostgreSQL (Supabase 대체)
+  postgres:
+    image: postgres:15-alpine
     ports:
-      - "3306:3306"
+      - "5432:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: community
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: community
     volumes:
-      - mysql-data:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Redis (캐시, 선택사항)
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
 
 volumes:
-  mysql-data:
+  postgres-data:
 ```
 
-### 2.3 운영 환경 (docker-compose.prod.yml)
+### 4.3 운영 환경 (Supabase 클라우드)
 
 ```yaml
+# docker-compose.prod.yml
 version: '3.8'
 
 services:
@@ -186,9 +234,8 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=${DATABASE_URL}
-      - SPRING_DATASOURCE_USERNAME=${DATABASE_USER}
-      - SPRING_DATASOURCE_PASSWORD=${DATABASE_PASSWORD}
+      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST}
+      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
     deploy:
       replicas: 2
       resources:
@@ -196,18 +243,13 @@ services:
           cpus: '1'
           memory: 1G
     restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 ```
 
 ---
 
-## 3. 환경별 application.yml
+## 5. 환경별 application.yml
 
-### 3.1 공통 설정 (application.yml)
+### 5.1 공통 설정 (application.yml)
 
 ```yaml
 spring:
@@ -216,17 +258,26 @@ spring:
 
 server:
   port: 8080
+
+# JPA 공통 설정
+spring:
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 ```
 
-### 3.2 개발 환경 (application-dev.yml)
+### 5.2 로컬 개발 - Supabase 연결 (application-dev.yml)
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/community
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:postgresql://${SUPABASE_DB_HOST:localhost}:5432/postgres
+    username: postgres
+    password: ${SUPABASE_DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
 
   jpa:
     hibernate:
@@ -236,10 +287,6 @@ spring:
       hibernate:
         format_sql: true
 
-  redis:
-    host: localhost
-    port: 6379
-
 logging:
   level:
     root: INFO
@@ -247,27 +294,61 @@ logging:
     org.hibernate.SQL: DEBUG
 ```
 
-### 3.3 운영 환경 (application-prod.yml)
+### 5.3 로컬 개발 - 로컬 PostgreSQL (application-local.yml)
 
 ```yaml
 spring:
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:postgresql://localhost:5432/community
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+logging:
+  level:
+    root: INFO
+    com.example: DEBUG
+```
+
+### 5.4 테스트 환경 (application-test.yml)
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+```
+
+### 5.5 운영 환경 (application-prod.yml)
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://${SUPABASE_DB_HOST}:5432/postgres
+    username: postgres
+    password: ${SUPABASE_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
+      connection-timeout: 30000
 
   jpa:
     hibernate:
       ddl-auto: validate  # 운영에서는 validate만
     show-sql: false
-
-  redis:
-    host: ${REDIS_HOST}
-    port: ${REDIS_PORT}
 
 logging:
   level:
@@ -277,68 +358,47 @@ logging:
 
 ---
 
-## 4. Docker 명령어 정리
+## 6. 개발 시나리오별 실행 방법
 
-### 4.1 개발 환경 실행
+### 시나리오 1: Supabase 직접 연결 (권장)
 
 ```bash
-# DB만 Docker로 (Spring은 로컬에서 실행)
-docker-compose up -d mysql redis
-
-# Spring 로컬 실행
+# .env 파일 설정 후
 ./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
 
-### 4.2 전체 Docker로 실행
+### 시나리오 2: 로컬 PostgreSQL로 개발 (오프라인)
+
+```bash
+# PostgreSQL 컨테이너 실행
+docker-compose -f docker-compose.local.yml up -d postgres
+
+# Spring 실행
+./gradlew bootRun --args='--spring.profiles.active=local'
+```
+
+### 시나리오 3: 테스트 실행 (H2 인메모리)
+
+```bash
+./gradlew test
+# application-test.yml의 H2 사용
+```
+
+### 시나리오 4: Docker로 전체 실행
 
 ```bash
 # 빌드
 ./gradlew build -x test
 
-# Docker 이미지 빌드 및 실행
+# Docker 실행
 docker-compose up --build
-
-# 백그라운드 실행
-docker-compose up -d --build
-```
-
-### 4.3 운영 환경 실행
-
-```bash
-# 환경변수 설정
-export TAG=v1.0.0
-export DATABASE_URL=jdbc:mysql://prod-db:3306/community
-export DATABASE_USER=produser
-export DATABASE_PASSWORD=securepassword
-
-# 실행
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### 4.4 유용한 명령어
-
-```bash
-# 로그 확인
-docker-compose logs -f app
-
-# 컨테이너 접속
-docker-compose exec app sh
-
-# MySQL 접속
-docker-compose exec mysql mysql -u root -p
-
-# 전체 종료 및 볼륨 삭제
-docker-compose down -v
-
-# 이미지 재빌드 (캐시 무시)
-docker-compose build --no-cache
 ```
 
 ---
 
-## 5. GitHub Actions + Docker
+## 7. GitHub Actions
 
-### 5.1 CI에서 Docker Services 사용
+### 7.1 CI (H2로 테스트)
 
 ```yaml
 name: CI
@@ -353,24 +413,52 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Test
+        run: ./gradlew test
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: community
+          SPRING_PROFILES_ACTIVE: test
+```
+
+### 7.2 CI (PostgreSQL로 통합 테스트)
+
+```yaml
+name: Integration Test
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: community
         ports:
-          - 3306:3306
+          - 5432:5432
         options: >-
-          --health-cmd="mysqladmin ping"
+          --health-cmd="pg_isready -U postgres"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
+          --health-retries=5
 
     steps:
       - uses: actions/checkout@v4
@@ -385,17 +473,13 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Test with real DB
+      - name: Integration Test
         run: ./gradlew test
         env:
-          SPRING_PROFILES_ACTIVE: dev
-          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/community
-          SPRING_DATASOURCE_USERNAME: root
-          SPRING_DATASOURCE_PASSWORD: root
-          SPRING_REDIS_HOST: localhost
+          SPRING_PROFILES_ACTIVE: local
 ```
 
-### 5.2 Docker 이미지 빌드 & 푸시
+### 7.3 Docker 이미지 빌드 & 푸시
 
 ```yaml
 name: Build and Push Docker Image
@@ -431,77 +515,61 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKER_USERNAME }}/community-app
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=sha,prefix=
-
       - name: Build and Push
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/community-app:latest
+            ${{ secrets.DOCKER_USERNAME }}/community-app:${{ github.sha }}
 ```
 
 ---
 
-## 6. .dockerignore
+## 8. .env 템플릿
 
-```dockerignore
-# Git
-.git
-.gitignore
+### .env.example (저장소에 포함)
 
-# Gradle
-.gradle
-build
-!build/libs/*.jar
+```env
+# Supabase 설정
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_DB_HOST=db.your-project.supabase.co
+SUPABASE_DB_PASSWORD=your-password
 
-# IDE
-.idea
-*.iml
-.vscode
+# 옵션: Supabase API Key (인증 사용 시)
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_KEY=your-service-key
+```
 
-# Logs
-*.log
-logs/
+### .gitignore에 추가
 
-# Test
-src/test
-
-# Docker
-Dockerfile*
-docker-compose*
-
-# Docs
-*.md
+```gitignore
+# Environment
+.env
+.env.local
+.env.*.local
 ```
 
 ---
 
-## 7. 프로젝트 파일 구조
+## 9. 프로젝트 구조
 
 ```
 project/
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml              # CI 워크플로우
-│       └── docker-build.yml    # Docker 빌드
+│       ├── ci.yml                  # CI (테스트)
+│       └── docker-build.yml        # Docker 빌드
 ├── src/
 │   ├── main/
 │   │   ├── java/
 │   │   └── resources/
-│   │       ├── application.yml
-│   │       ├── application-dev.yml
-│   │       └── application-prod.yml
+│   │       ├── application.yml      # 공통
+│   │       ├── application-dev.yml  # Supabase 연결
+│   │       ├── application-local.yml # 로컬 PostgreSQL
+│   │       ├── application-test.yml  # H2 테스트
+│   │       └── application-prod.yml  # 운영
 │   └── test/
 ├── gradle/
 │   └── wrapper/
@@ -509,48 +577,69 @@ project/
 ├── settings.gradle
 ├── gradlew
 ├── gradlew.bat
-├── Dockerfile                  # 멀티스테이지 빌드
-├── docker-compose.yml          # 개발 환경
-├── docker-compose.prod.yml     # 운영 환경
+├── Dockerfile
+├── docker-compose.yml              # Supabase 연결
+├── docker-compose.local.yml        # 로컬 PostgreSQL
+├── docker-compose.prod.yml         # 운영
 ├── .dockerignore
 ├── .gitignore
-└── init.sql                    # DB 초기화 (선택)
+├── .env.example                    # 환경변수 템플릿
+└── .env                            # 실제 환경변수 (gitignore)
 ```
 
 ---
 
-## 8. 체크리스트
+## 10. Supabase vs 로컬 PostgreSQL 비교
 
-### 개발 환경 구성
+| 기준 | Supabase 직접 연결 | 로컬 PostgreSQL |
+|------|-------------------|-----------------|
+| 설정 | .env만 설정 | Docker 필요 |
+| 오프라인 개발 | 불가 | 가능 |
+| 데이터 공유 | 팀원과 공유 | 각자 별도 |
+| 비용 | 무료 티어 있음 | 무료 |
+| 운영 환경 동일성 | 높음 | 중간 |
 
-- [ ] Dockerfile 작성 (멀티스테이지)
-- [ ] docker-compose.yml 작성
-- [ ] .dockerignore 작성
-- [ ] 환경별 application-{profile}.yml 분리
+### 권장 조합
 
-### CI/CD 구성
-
-- [ ] GitHub Actions CI 워크플로우
-- [ ] Docker 이미지 빌드 워크플로우
-- [ ] Docker Hub 또는 Registry 연동
-
-### 보안
-
-- [ ] Dockerfile에서 non-root 사용자 사용
-- [ ] 민감 정보는 환경변수로 관리
-- [ ] .dockerignore에 민감 파일 제외
+```
+개발:   Supabase 직접 연결 (온라인) 또는 로컬 PostgreSQL (오프라인)
+테스트: H2 인메모리 (빠름)
+CI:     PostgreSQL Docker (통합 테스트)
+운영:   Supabase 클라우드
+```
 
 ---
 
-## 9. 빠른 시작
+## 11. 체크리스트
+
+### Supabase 설정
+- [ ] Supabase 프로젝트 생성
+- [ ] 데이터베이스 비밀번호 설정
+- [ ] .env 파일 작성
+- [ ] .gitignore에 .env 추가
+
+### 프로젝트 설정
+- [ ] build.gradle에 PostgreSQL 의존성
+- [ ] 환경별 application-{profile}.yml 작성
+- [ ] Dockerfile 작성
+
+### CI/CD
+- [ ] GitHub Actions 워크플로우
+- [ ] Docker 이미지 빌드
+
+---
+
+## 12. 빠른 시작
 
 ```bash
-# 1. DB 컨테이너 실행
-docker-compose up -d mysql redis
+# 1. Supabase 프로젝트 생성 후 .env 작성
+cp .env.example .env
+# .env 파일 편집
 
-# 2. 로컬에서 Spring 실행
+# 2. Spring 실행 (Supabase 연결)
 ./gradlew bootRun --args='--spring.profiles.active=dev'
 
-# 또는 전체 Docker로 실행
-docker-compose up --build
+# 또는 로컬 PostgreSQL로 개발
+docker-compose -f docker-compose.local.yml up -d postgres
+./gradlew bootRun --args='--spring.profiles.active=local'
 ```
