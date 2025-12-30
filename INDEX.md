@@ -15,28 +15,35 @@
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  2. 로컬 개발 환경 구성                      │
-│                  SPRING_DOCKER_SETUP.md                     │
-│           (Docker + Spring Boot + PostgreSQL)               │
+│                  2. PostgreSQL 입문                         │
+│                   POSTGRESQL_TUTORIAL.md                    │
+│           (MySQL 개발자를 위한 PostgreSQL 가이드)            │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   3. CI/CD 파이프라인                        │
+│                  3. 로컬 개발 환경 구성                      │
+│                  SPRING_DOCKER_SETUP.md                     │
+│           (Docker + Spring Boot + AWS RDS)                  │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   4. CI/CD 파이프라인                        │
 │                GITHUB_ACTIONS_TUTORIAL.md                   │
 │              (GitHub Actions 워크플로우)                     │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    4. 배포 전략 선택                         │
+│                    5. 배포 전략 선택                         │
 │                DOCKER_VS_CI_COMPARISON.md                   │
 │              (Docker vs CI/CD 비교 분석)                    │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    5. 테스트 전략                            │
+│                    6. 테스트 전략                            │
 │              SPRING_TEST_MODULARIZATION.md                  │
 │             (테스트 모듈화 및 자동화)                        │
 └─────────────────────────────────────────────────────────────┘
@@ -50,8 +57,9 @@
 
 ```
 1. DATABASE_SERVICE_COMPARISON.md → 용어집 먼저 읽기
-2. SPRING_DOCKER_SETUP.md → 빠른 시작 섹션으로 환경 구성
-3. GITHUB_ACTIONS_TUTORIAL.md → CI 동작 방식 이해
+2. POSTGRESQL_TUTORIAL.md → PostgreSQL 기초 학습 (MySQL 경험자)
+3. SPRING_DOCKER_SETUP.md → 빠른 시작 섹션으로 환경 구성
+4. GITHUB_ACTIONS_TUTORIAL.md → CI 동작 방식 이해
 ```
 
 ### 데이터베이스를 선택해야 한다면?
@@ -61,14 +69,18 @@
 | Supabase vs AWS 고민 | DATABASE_SERVICE_COMPARISON.md | 섹션 1-4 |
 | MySQL vs PostgreSQL 고민 | DATABASE_SERVICE_COMPARISON.md | 섹션 10 |
 | 비용 계산 필요 | DATABASE_SERVICE_COMPARISON.md | 섹션 6 |
+| PostgreSQL 처음 배우기 | POSTGRESQL_TUTORIAL.md | 섹션 1-3 |
+| PostgreSQL 고급 기능 | POSTGRESQL_TUTORIAL.md | 섹션 4 |
+| MySQL → PostgreSQL 마이그레이션 | POSTGRESQL_TUTORIAL.md | 섹션 6 |
 
 ### 개발 환경을 구성해야 한다면?
 
 | 상황 | 추천 문서 | 참고 섹션 |
 |------|----------|----------|
 | Docker로 로컬 환경 구성 | SPRING_DOCKER_SETUP.md | 섹션 4 |
-| Supabase 연결 설정 | SPRING_DOCKER_SETUP.md | 섹션 1, 5 |
+| AWS RDS 연결 설정 | SPRING_DOCKER_SETUP.md | 섹션 1, 5 |
 | 환경별 설정 분리 | SPRING_DOCKER_SETUP.md | 섹션 5 |
+| JPA/Hibernate PostgreSQL 설정 | POSTGRESQL_TUTORIAL.md | 섹션 9 |
 
 ### CI/CD를 구성해야 한다면?
 
@@ -92,7 +104,8 @@
 | 문서 | 설명 | 레벨 | 읽기 시간 |
 |------|------|------|----------|
 | [DATABASE_SERVICE_COMPARISON.md](DATABASE_SERVICE_COMPARISON.md) | DB 서비스 비교 (Supabase, AWS, GCP) | 초급 | 25분 |
-| [SPRING_DOCKER_SETUP.md](SPRING_DOCKER_SETUP.md) | Spring + Docker + Supabase 환경 구성 | 초급~중급 | 20분 |
+| [POSTGRESQL_TUTORIAL.md](POSTGRESQL_TUTORIAL.md) | PostgreSQL 입문 (MySQL 비교) | 초급~중급 | 40분 |
+| [SPRING_DOCKER_SETUP.md](SPRING_DOCKER_SETUP.md) | Spring + Docker + AWS RDS 환경 구성 | 초급~중급 | 25분 |
 | [GITHUB_ACTIONS_TUTORIAL.md](GITHUB_ACTIONS_TUTORIAL.md) | GitHub Actions CI/CD 가이드 | 중급 | 15분 |
 | [DOCKER_VS_CI_COMPARISON.md](DOCKER_VS_CI_COMPARISON.md) | Docker와 CI/CD 비교 분석 | 중급 | 15분 |
 | [SPRING_TEST_MODULARIZATION.md](SPRING_TEST_MODULARIZATION.md) | Spring 테스트 모듈화 전략 | 중급 | 20분 |
@@ -185,6 +198,8 @@ java -version    # Java 17 필요
 
 | 날짜 | 문서 | 변경 내용 |
 |------|------|----------|
+| 2025-01-01 | POSTGRESQL_TUTORIAL.md | PostgreSQL 입문 튜토리얼 신규 생성 |
+| 2025-01-01 | SPRING_DOCKER_SETUP.md | Supabase → AWS RDS PostgreSQL로 변경 |
 | 2025-01-01 | 전체 | 문서 품질 개선 및 연결성 강화 |
 | 2025-01-01 | INDEX.md | 신규 생성 |
 | 2025-01-01 | DATABASE_SERVICE_COMPARISON.md | MySQL vs PostgreSQL 비교 추가 |
