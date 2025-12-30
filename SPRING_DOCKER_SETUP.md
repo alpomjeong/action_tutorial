@@ -1,14 +1,14 @@
-# Spring Boot + Supabase Docker 환경 세팅 가이드
+# Spring Boot + AWS RDS PostgreSQL Docker 환경 세팅 가이드
 
-> Spring Boot 프로젝트를 Docker와 Supabase로 구성하는 실전 가이드
+> Spring Boot 프로젝트를 Docker와 AWS RDS PostgreSQL로 구성하는 실전 가이드
 
 ## 문서 정보
 
 | 항목 | 내용 |
 |------|------|
 | **레벨** | 초급 ~ 중급 |
-| **예상 읽기 시간** | 20분 |
-| **선행 지식** | Spring Boot 기초, Docker 기본 개념 |
+| **예상 읽기 시간** | 25분 |
+| **선행 지식** | Spring Boot 기초, Docker 기본 개념, AWS 기초 |
 | **최종 업데이트** | 2025년 1월 |
 
 ### 관련 문서
@@ -21,7 +21,7 @@
 
 ## 목차
 
-1. [Supabase 설정](#1-supabase-설정)
+1. [AWS RDS 설정](#1-aws-rds-설정)
 2. [build.gradle 설정](#2-buildgradle-설정)
 3. [Dockerfile](#3-dockerfile)
 4. [Docker Compose](#4-docker-compose)
@@ -30,10 +30,11 @@
 7. [GitHub Actions](#7-github-actions)
 8. [.env 템플릿](#8-env-템플릿)
 9. [프로젝트 구조](#9-프로젝트-구조)
-10. [Supabase vs 로컬 PostgreSQL 비교](#10-supabase-vs-로컬-postgresql-비교)
+10. [AWS RDS vs 로컬 PostgreSQL 비교](#10-aws-rds-vs-로컬-postgresql-비교)
 11. [체크리스트](#11-체크리스트)
 12. [빠른 시작](#12-빠른-시작)
 13. [문제 해결](#13-문제-해결)
+14. [보안 설정](#14-보안-설정)
 
 ---
 
@@ -48,16 +49,16 @@
                       │ JDBC (PostgreSQL)
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│                    Supabase                             │
+│                      AWS                                │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │ PostgreSQL  │  │    Auth     │  │   Storage   │     │
-│  │   (DB)      │  │   (인증)    │  │  (파일)     │     │
+│  │  RDS        │  │    EC2      │  │     S3      │     │
+│  │ PostgreSQL  │  │  (Optional) │  │  (Storage)  │     │
 │  └─────────────┘  └─────────────┘  └─────────────┘     │
 └─────────────────────────────────────────────────────────┘
 ```
 
 **Spring Boot**: 비즈니스 로직, API 개발
-**Supabase**: PostgreSQL DB 호스팅 (+ 인증, 스토리지 옵션)
+**AWS RDS**: PostgreSQL 관리형 데이터베이스
 
 ---
 
@@ -68,35 +69,71 @@
 | Spring Boot | 3.2.x | 최신 안정 |
 | Java | 17 (LTS) | Temurin 권장 |
 | Gradle | 8.5+ | Spring Boot 3.2 요구 |
-| PostgreSQL | 15.x | Supabase 기본 |
-| Redis | 7.x | 캐시용 (선택) |
+| PostgreSQL | 15.x | AWS RDS 지원 |
+| Redis | 7.x | ElastiCache (선택) |
 
 ---
 
-## 1. Supabase 설정
+## 1. AWS RDS 설정
 
-### 1.1 Supabase 프로젝트 생성
+### 1.1 RDS 인스턴스 생성
 
-1. https://supabase.com 접속
-2. New Project 생성
-3. 프로젝트 Settings → Database에서 연결 정보 확인:
+**AWS Console:**
+1. AWS Console → RDS → Create database
+2. 설정:
+
+| 항목 | 값 |
+|------|-----|
+| Engine | PostgreSQL 15.x |
+| Template | Free tier (개발) / Production (운영) |
+| DB instance identifier | community-db |
+| Master username | postgres |
+| Master password | [강력한 비밀번호] |
+| DB instance class | db.t3.micro (개발) / db.t3.small+ (운영) |
+| Storage | 20GB (gp2) |
+| Public access | Yes (개발) / No (운영) |
+
+**AWS CLI:**
+```bash
+aws rds create-db-instance \
+  --db-instance-identifier community-db \
+  --db-instance-class db.t3.micro \
+  --engine postgres \
+  --engine-version 15.4 \
+  --master-username postgres \
+  --master-user-password YOUR_PASSWORD \
+  --allocated-storage 20 \
+  --publicly-accessible
+```
+
+### 1.2 보안 그룹 설정
 
 ```
-Host:     db.<project-ref>.supabase.co
+인바운드 규칙:
+┌──────────┬──────────┬─────────────────┐
+│ Type     │ Port     │ Source          │
+├──────────┼──────────┼─────────────────┤
+│ PostgreSQL│ 5432    │ 내 IP           │  ← 개발용
+│ PostgreSQL│ 5432    │ EC2 보안그룹    │  ← 운영용
+└──────────┴──────────┴─────────────────┘
+```
+
+### 1.3 연결 정보 확인
+
+RDS 콘솔에서 엔드포인트 확인:
+
+```
+Host:     community-db.xxxx.ap-northeast-2.rds.amazonaws.com
 Port:     5432
 Database: postgres
 User:     postgres
-Password: [프로젝트 생성 시 설정한 비밀번호]
+Password: [설정한 비밀번호]
 ```
 
-### 1.2 Connection String
+### 1.4 Connection String
 
 ```
-# Direct Connection (권장)
-jdbc:postgresql://db.<project-ref>.supabase.co:5432/postgres
-
-# Connection Pooler (동시 연결 많을 때)
-jdbc:postgresql://db.<project-ref>.supabase.co:6543/postgres?pgbouncer=true
+jdbc:postgresql://community-db.xxxx.ap-northeast-2.rds.amazonaws.com:5432/postgres
 ```
 
 ---
@@ -125,8 +162,9 @@ dependencies {
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    // PostgreSQL (Supabase)
+    // PostgreSQL
     runtimeOnly 'org.postgresql:postgresql'
 
     // Lombok
@@ -184,16 +222,15 @@ USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# JVM 최적화 옵션
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
 ```
 
 ---
 
 ## 4. Docker Compose
 
-### 4.1 로컬 개발 - Supabase 직접 연결
-
-Supabase 클라우드에 직접 연결 (DB 설치 불필요).
+### 4.1 로컬 개발 - AWS RDS 직접 연결
 
 ```yaml
 # docker-compose.yml
@@ -208,30 +245,23 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST}
-      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
     env_file:
       - .env
 ```
 
-**.env 파일 (gitignore에 추가)**:
-```env
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_DB_HOST=db.<project-ref>.supabase.co
-SUPABASE_DB_PASSWORD=your-database-password
-```
-
 ### 4.2 로컬 개발 - PostgreSQL Docker (오프라인 개발)
-
-Supabase 없이 로컬 PostgreSQL로 개발.
 
 ```yaml
 # docker-compose.local.yml
 version: '3.8'
 
 services:
-  # 로컬 PostgreSQL (Supabase 대체)
+  # 로컬 PostgreSQL (AWS RDS 대체)
   postgres:
     image: postgres:15-alpine
     ports:
@@ -254,11 +284,24 @@ services:
     ports:
       - "6379:6379"
 
+  # Spring Boot 앱
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres-data:
 ```
 
-### 4.3 운영 환경 (Supabase 클라우드)
+### 4.3 운영 환경 (AWS RDS 연결)
 
 ```yaml
 # docker-compose.prod.yml
@@ -266,13 +309,16 @@ version: '3.8'
 
 services:
   app:
-    image: myregistry/myapp:${TAG:-latest}
+    image: ${ECR_REGISTRY}/community-app:${TAG:-latest}
     ports:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST}
-      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
     deploy:
       replicas: 2
       resources:
@@ -280,6 +326,12 @@ services:
           cpus: '1'
           memory: 1G
     restart: always
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/community-app
+        awslogs-region: ap-northeast-2
+        awslogs-stream-prefix: app
 ```
 
 ---
@@ -302,19 +354,22 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
 ```
 
-### 5.2 로컬 개발 - Supabase 연결 (application-dev.yml)
+### 5.2 개발 환경 - AWS RDS 연결 (application-dev.yml)
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://${SUPABASE_DB_HOST:localhost}:5432/postgres
-    username: postgres
-    password: ${SUPABASE_DB_PASSWORD:postgres}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:postgres}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
 
   jpa:
     hibernate:
@@ -373,14 +428,16 @@ spring:
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://${SUPABASE_DB_HOST}:5432/postgres
-    username: postgres
-    password: ${SUPABASE_DB_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
       connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
   jpa:
     hibernate:
@@ -397,7 +454,7 @@ logging:
 
 ## 6. 개발 시나리오별 실행 방법
 
-### 시나리오 1: Supabase 직접 연결 (권장)
+### 시나리오 1: AWS RDS 직접 연결 (권장)
 
 ```bash
 # .env 파일 설정 후
@@ -421,14 +478,14 @@ docker-compose -f docker-compose.local.yml up -d postgres
 # application-test.yml의 H2 사용
 ```
 
-### 시나리오 4: Docker로 전체 실행
+### 시나리오 4: Docker로 전체 실행 (로컬)
 
 ```bash
 # 빌드
 ./gradlew build -x test
 
-# Docker 실행
-docker-compose up --build
+# 로컬 전체 스택 실행
+docker-compose -f docker-compose.local.yml up --build
 ```
 
 ---
@@ -516,15 +573,19 @@ jobs:
           SPRING_PROFILES_ACTIVE: local
 ```
 
-### 7.3 Docker 이미지 빌드 & 푸시
+### 7.3 Docker 이미지 빌드 & ECR 푸시
 
 ```yaml
-name: Build and Push Docker Image
+name: Build and Push to ECR
 
 on:
   push:
     branches: [main]
     tags: ['v*']
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: community-app
 
 jobs:
   build:
@@ -543,23 +604,26 @@ jobs:
       - name: Build JAR
         run: ./gradlew build -x test
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Build and Push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/community-app:latest
-            ${{ secrets.DOCKER_USERNAME }}/community-app:${{ github.sha }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 ```
 
 ---
@@ -569,14 +633,20 @@ jobs:
 ### .env.example (저장소에 포함)
 
 ```env
-# Supabase 설정
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_DB_HOST=db.your-project.supabase.co
-SUPABASE_DB_PASSWORD=your-password
+# AWS RDS 설정
+DB_HOST=community-db.xxxx.ap-northeast-2.rds.amazonaws.com
+DB_PORT=5432
+DB_NAME=postgres
+DB_USERNAME=postgres
+DB_PASSWORD=your-secure-password
 
-# 옵션: Supabase API Key (인증 사용 시)
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_KEY=your-service-key
+# AWS 설정 (선택)
+AWS_REGION=ap-northeast-2
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+
+# ECR 설정 (선택)
+ECR_REGISTRY=123456789.dkr.ecr.ap-northeast-2.amazonaws.com
 ```
 
 ### .gitignore에 추가
@@ -586,6 +656,9 @@ SUPABASE_SERVICE_KEY=your-service-key
 .env
 .env.local
 .env.*.local
+
+# AWS
+.aws/
 ```
 
 ---
@@ -597,13 +670,14 @@ project/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                  # CI (테스트)
-│       └── docker-build.yml        # Docker 빌드
+│       ├── integration-test.yml    # 통합 테스트
+│       └── ecr-push.yml            # ECR 푸시
 ├── src/
 │   ├── main/
 │   │   ├── java/
 │   │   └── resources/
 │   │       ├── application.yml      # 공통
-│   │       ├── application-dev.yml  # Supabase 연결
+│   │       ├── application-dev.yml  # AWS RDS 연결
 │   │       ├── application-local.yml # 로컬 PostgreSQL
 │   │       ├── application-test.yml  # H2 테스트
 │   │       └── application-prod.yml  # 운영
@@ -615,7 +689,7 @@ project/
 ├── gradlew
 ├── gradlew.bat
 ├── Dockerfile
-├── docker-compose.yml              # Supabase 연결
+├── docker-compose.yml              # AWS RDS 연결
 ├── docker-compose.local.yml        # 로컬 PostgreSQL
 ├── docker-compose.prod.yml         # 운영
 ├── .dockerignore
@@ -626,54 +700,59 @@ project/
 
 ---
 
-## 10. Supabase vs 로컬 PostgreSQL 비교
+## 10. AWS RDS vs 로컬 PostgreSQL 비교
 
-| 기준 | Supabase 직접 연결 | 로컬 PostgreSQL |
-|------|-------------------|-----------------|
-| 설정 | .env만 설정 | Docker 필요 |
+| 기준 | AWS RDS | 로컬 PostgreSQL |
+|------|---------|-----------------|
+| 설정 | AWS 콘솔에서 생성 | Docker 필요 |
 | 오프라인 개발 | 불가 | 가능 |
-| 데이터 공유 | 팀원과 공유 | 각자 별도 |
-| 비용 | 무료 티어 있음 | 무료 |
+| 데이터 공유 | 팀원과 공유 가능 | 각자 별도 |
+| 비용 | 유료 (프리티어 있음) | 무료 |
 | 운영 환경 동일성 | 높음 | 중간 |
+| 백업/복구 | 자동 | 수동 |
+| 확장성 | 쉬움 | 어려움 |
 
 ### 권장 조합
 
 ```
-개발:   Supabase 직접 연결 (온라인) 또는 로컬 PostgreSQL (오프라인)
+개발:   AWS RDS 직접 연결 (온라인) 또는 로컬 PostgreSQL (오프라인)
 테스트: H2 인메모리 (빠름)
 CI:     PostgreSQL Docker (통합 테스트)
-운영:   Supabase 클라우드
+운영:   AWS RDS (Multi-AZ 권장)
 ```
 
 ---
 
 ## 11. 체크리스트
 
-### Supabase 설정
-- [ ] Supabase 프로젝트 생성
-- [ ] 데이터베이스 비밀번호 설정
-- [ ] .env 파일 작성
-- [ ] .gitignore에 .env 추가
+### AWS 설정
+- [ ] AWS 계정 생성
+- [ ] RDS 인스턴스 생성
+- [ ] 보안 그룹 설정 (5432 포트)
+- [ ] IAM 사용자 생성 (ECR 푸시용)
+- [ ] ECR 저장소 생성
 
 ### 프로젝트 설정
 - [ ] build.gradle에 PostgreSQL 의존성
 - [ ] 환경별 application-{profile}.yml 작성
 - [ ] Dockerfile 작성
+- [ ] .env 파일 작성
 
 ### CI/CD
+- [ ] GitHub Secrets 설정 (AWS 키, DB 비밀번호)
 - [ ] GitHub Actions 워크플로우
-- [ ] Docker 이미지 빌드
+- [ ] ECR 푸시 확인
 
 ---
 
 ## 12. 빠른 시작
 
 ```bash
-# 1. Supabase 프로젝트 생성 후 .env 작성
+# 1. AWS RDS 생성 후 .env 작성
 cp .env.example .env
-# .env 파일 편집
+# .env 파일에 RDS 엔드포인트와 비밀번호 입력
 
-# 2. Spring 실행 (Supabase 연결)
+# 2. Spring 실행 (AWS RDS 연결)
 ./gradlew bootRun --args='--spring.profiles.active=dev'
 
 # 또는 로컬 PostgreSQL로 개발
@@ -687,17 +766,28 @@ docker-compose -f docker-compose.local.yml up -d postgres
 
 ### 자주 발생하는 오류
 
-#### 1. PostgreSQL 연결 실패
+#### 1. RDS 연결 실패
 ```
-Connection refused to host: db.xxx.supabase.co
+Connection refused to host: xxx.rds.amazonaws.com
 ```
 
 **해결:**
-- Supabase 프로젝트가 활성 상태인지 확인
+- RDS 인스턴스가 running 상태인지 확인
+- 보안 그룹에서 5432 포트 허용 확인
+- Public access 설정 확인 (개발 환경)
 - .env 파일의 호스트 주소 확인
-- 방화벽/VPN 설정 확인
 
-#### 2. Gradle 빌드 실패
+#### 2. 인증 실패
+```
+FATAL: password authentication failed for user "postgres"
+```
+
+**해결:**
+- RDS Master password 확인
+- .env 파일의 비밀번호 확인
+- 특수문자 이스케이프 필요할 수 있음
+
+#### 3. Gradle 빌드 실패
 ```
 Could not resolve org.springframework.boot:spring-boot-starter-web
 ```
@@ -708,7 +798,7 @@ Could not resolve org.springframework.boot:spring-boot-starter-web
 ./gradlew clean build --refresh-dependencies
 ```
 
-#### 3. Docker 빌드 시 JAR 파일 없음
+#### 4. Docker 빌드 시 JAR 파일 없음
 ```
 COPY failed: no source files were specified
 ```
@@ -720,7 +810,7 @@ COPY failed: no source files were specified
 docker-compose up --build
 ```
 
-#### 4. 포트 충돌
+#### 5. 포트 충돌
 ```
 Bind for 0.0.0.0:5432 failed: port is already allocated
 ```
@@ -735,26 +825,11 @@ ports:
   - "5433:5432"  # 호스트 포트 변경
 ```
 
-#### 5. application.yml 프로파일 미적용
-```
-No active profile set, falling back to 1 default profile
-```
-
-**해결:**
-```bash
-# 프로파일 명시적 지정
-./gradlew bootRun --args='--spring.profiles.active=dev'
-
-# 또는 환경변수로 설정
-export SPRING_PROFILES_ACTIVE=dev
-./gradlew bootRun
-```
-
 ### 디버깅 팁
 
 ```bash
-# 1. Supabase 연결 테스트
-psql "postgresql://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres"
+# 1. RDS 연결 테스트
+psql "postgresql://postgres:PASSWORD@xxx.rds.amazonaws.com:5432/postgres"
 
 # 2. Docker 컨테이너 로그 확인
 docker-compose logs -f app
@@ -764,6 +839,57 @@ docker-compose logs -f app
 
 # 4. 환경변수 확인
 docker-compose config
+
+# 5. RDS 상태 확인 (AWS CLI)
+aws rds describe-db-instances --db-instance-identifier community-db
+```
+
+---
+
+## 14. 보안 설정
+
+### 운영 환경 보안 권장사항
+
+#### 1. RDS 보안
+```
+- Public access: No (운영)
+- VPC 내부에서만 접근
+- 보안 그룹으로 EC2/ECS에서만 접근 허용
+- SSL 연결 강제
+```
+
+#### 2. SSL 연결 설정
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}?sslmode=require
+```
+
+#### 3. IAM 인증 (선택)
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: # IAM 토큰 사용
+```
+
+#### 4. Secrets Manager 사용 (권장)
+```yaml
+# AWS Secrets Manager에서 자동으로 비밀번호 가져오기
+spring:
+  cloud:
+    aws:
+      secretsmanager:
+        enabled: true
+```
+
+### 비밀번호 정책
+```
+- 최소 16자 이상
+- 대문자, 소문자, 숫자, 특수문자 포함
+- 정기적 교체 (90일)
+- Secrets Manager로 관리 권장
 ```
 
 ---
@@ -773,3 +899,4 @@ docker-compose config
 - [GitHub Actions로 CI/CD 구성하기](GITHUB_ACTIONS_TUTORIAL.md)
 - [Docker vs CI/CD 전략 비교](DOCKER_VS_CI_COMPARISON.md)
 - [테스트 모듈화 전략](SPRING_TEST_MODULARIZATION.md)
+- [데이터베이스 서비스 비교](DATABASE_SERVICE_COMPARISON.md)
