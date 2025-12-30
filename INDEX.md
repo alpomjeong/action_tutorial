@@ -60,6 +60,13 @@
 │                 8. 아키텍처 설계                             │
 │              CLEAN_ARCHITECTURE_TUTORIAL.md                 │
 │            (Clean Architecture 적용 가이드)                 │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 9. 알림 시스템 구현                          │
+│           NOTIFICATION_ARCHITECTURE_TUTORIAL.md             │
+│          (비동기 알림 + 이벤트 기반 아키텍처)                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -133,6 +140,17 @@
 | 아키텍처 테스트 전략 | CLEAN_ARCHITECTURE_TUTORIAL.md | 섹션 8 |
 | 점진적 도입 방법 | CLEAN_ARCHITECTURE_TUTORIAL.md | 섹션 10 |
 
+### 알림 기능을 구현하고 싶다면?
+
+| 상황 | 추천 문서 | 참고 섹션 |
+|------|----------|----------|
+| 알림 시스템 개요 | NOTIFICATION_ARCHITECTURE_TUTORIAL.md | 섹션 1 |
+| 알림 도메인 설계 | NOTIFICATION_ARCHITECTURE_TUTORIAL.md | 섹션 3 |
+| 비동기 처리 (@Async) | NOTIFICATION_ARCHITECTURE_TUTORIAL.md | 섹션 7 |
+| 이벤트 기반 알림 발송 | NOTIFICATION_ARCHITECTURE_TUTORIAL.md | 섹션 6 |
+| FCM 푸시 알림 | NOTIFICATION_ARCHITECTURE_TUTORIAL.md | 섹션 5 |
+| 알림 확장 전략 | NOTIFICATION_ARCHITECTURE_TUTORIAL.md | 섹션 10 |
+
 ---
 
 ## 문서 목록
@@ -147,6 +165,7 @@
 | [SPRING_TEST_MODULARIZATION.md](SPRING_TEST_MODULARIZATION.md) | Spring 테스트 모듈화 전략 | 중급 | 20분 |
 | [SWAGGER_TUTORIAL.md](SWAGGER_TUTORIAL.md) | Swagger/OpenAPI 3.0 적용 가이드 | 초급~중급 | 35분 |
 | [CLEAN_ARCHITECTURE_TUTORIAL.md](CLEAN_ARCHITECTURE_TUTORIAL.md) | Clean Architecture 적용 가이드 | 중급 | 45분 |
+| [NOTIFICATION_ARCHITECTURE_TUTORIAL.md](NOTIFICATION_ARCHITECTURE_TUTORIAL.md) | 알림 시스템 아키텍처 가이드 | 중급 | 30분 |
 
 ---
 
@@ -240,6 +259,7 @@ java -version    # Java 17 필요
 
 | 날짜 | 문서 | 변경 내용 |
 |------|------|----------|
+| 2025-01-01 | NOTIFICATION_ARCHITECTURE_TUTORIAL.md | 알림 시스템 아키텍처 튜토리얼 신규 생성 |
 | 2025-01-01 | CLEAN_ARCHITECTURE_TUTORIAL.md | Clean Architecture 튜토리얼 신규 생성 |
 | 2025-01-01 | SWAGGER_TUTORIAL.md | Swagger/OpenAPI 튜토리얼 신규 생성 |
 | 2025-01-01 | POSTGRESQL_TUTORIAL.md | PostgreSQL 입문 튜토리얼 신규 생성 |
