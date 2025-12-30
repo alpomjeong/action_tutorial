@@ -53,6 +53,13 @@
 │                   7. API 문서화                              │
 │                   SWAGGER_TUTORIAL.md                       │
 │             (Swagger/OpenAPI 3.0 적용)                      │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 8. 아키텍처 설계                             │
+│              CLEAN_ARCHITECTURE_TUTORIAL.md                 │
+│            (Clean Architecture 적용 가이드)                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -114,6 +121,18 @@
 | API 그룹화 | SWAGGER_TUTORIAL.md | 섹션 8 |
 | 운영 환경 비활성화 | SWAGGER_TUTORIAL.md | 섹션 9 |
 
+### 아키텍처를 개선하고 싶다면?
+
+| 상황 | 추천 문서 | 참고 섹션 |
+|------|----------|----------|
+| Clean Architecture 개념 | CLEAN_ARCHITECTURE_TUTORIAL.md | 섹션 1-2 |
+| 4개 레이어 이해 | CLEAN_ARCHITECTURE_TUTORIAL.md | 섹션 3 |
+| Spring Boot 프로젝트 구조 | CLEAN_ARCHITECTURE_TUTORIAL.md | 섹션 5 |
+| 실전 구현 예제 | CLEAN_ARCHITECTURE_TUTORIAL.md | 섹션 6 |
+| Port/Adapter 패턴 | CLEAN_ARCHITECTURE_TUTORIAL.md | 섹션 7 |
+| 아키텍처 테스트 전략 | CLEAN_ARCHITECTURE_TUTORIAL.md | 섹션 8 |
+| 점진적 도입 방법 | CLEAN_ARCHITECTURE_TUTORIAL.md | 섹션 10 |
+
 ---
 
 ## 문서 목록
@@ -127,6 +146,7 @@
 | [DOCKER_VS_CI_COMPARISON.md](DOCKER_VS_CI_COMPARISON.md) | Docker와 CI/CD 비교 분석 | 중급 | 15분 |
 | [SPRING_TEST_MODULARIZATION.md](SPRING_TEST_MODULARIZATION.md) | Spring 테스트 모듈화 전략 | 중급 | 20분 |
 | [SWAGGER_TUTORIAL.md](SWAGGER_TUTORIAL.md) | Swagger/OpenAPI 3.0 적용 가이드 | 초급~중급 | 35분 |
+| [CLEAN_ARCHITECTURE_TUTORIAL.md](CLEAN_ARCHITECTURE_TUTORIAL.md) | Clean Architecture 적용 가이드 | 중급 | 45분 |
 
 ---
 
@@ -210,12 +230,17 @@ java -version    # Java 17 필요
 **A**: CrudControllerTest 추상 클래스 상속 방식을 추천합니다.
 → [SPRING_TEST_MODULARIZATION.md](SPRING_TEST_MODULARIZATION.md) 참고
 
+### Q: Clean Architecture를 적용해야 하나요?
+**A**: 프로젝트 규모에 따라 다릅니다. 소규모는 전통적 계층형으로 충분하고, 중규모 이상이면 점진적으로 도입하세요.
+→ [CLEAN_ARCHITECTURE_TUTORIAL.md](CLEAN_ARCHITECTURE_TUTORIAL.md) 참고
+
 ---
 
 ## 문서 업데이트 이력
 
 | 날짜 | 문서 | 변경 내용 |
 |------|------|----------|
+| 2025-01-01 | CLEAN_ARCHITECTURE_TUTORIAL.md | Clean Architecture 튜토리얼 신규 생성 |
 | 2025-01-01 | SWAGGER_TUTORIAL.md | Swagger/OpenAPI 튜토리얼 신규 생성 |
 | 2025-01-01 | POSTGRESQL_TUTORIAL.md | PostgreSQL 입문 튜토리얼 신규 생성 |
 | 2025-01-01 | SPRING_DOCKER_SETUP.md | Supabase → AWS RDS PostgreSQL로 변경 |
