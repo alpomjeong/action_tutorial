@@ -93,6 +93,8 @@
 | PostgreSQL 처음 배우기 | POSTGRESQL_TUTORIAL.md | 섹션 1-3 |
 | PostgreSQL 고급 기능 | POSTGRESQL_TUTORIAL.md | 섹션 4 |
 | MySQL → PostgreSQL 마이그레이션 | POSTGRESQL_TUTORIAL.md | 섹션 6 |
+| JSONB vs 컬럼 방식 선택 | POSTGRESQL_JSONB_VS_COLUMN.md | 섹션 4-6 |
+| 유연한 스키마 설계 | POSTGRESQL_JSONB_VS_COLUMN.md | 섹션 7 |
 
 ### 개발 환경을 구성해야 한다면?
 
@@ -159,6 +161,7 @@
 |------|------|------|----------|
 | [DATABASE_SERVICE_COMPARISON.md](DATABASE_SERVICE_COMPARISON.md) | DB 서비스 비교 (Supabase, AWS, GCP) | 초급 | 25분 |
 | [POSTGRESQL_TUTORIAL.md](POSTGRESQL_TUTORIAL.md) | PostgreSQL 입문 (MySQL 비교) | 초급~중급 | 40분 |
+| [POSTGRESQL_JSONB_VS_COLUMN.md](POSTGRESQL_JSONB_VS_COLUMN.md) | JSONB vs 컬럼 방식 비교 | 중급 | 10분 |
 | [SPRING_DOCKER_SETUP.md](SPRING_DOCKER_SETUP.md) | Spring + Docker + AWS RDS 환경 구성 | 초급~중급 | 25분 |
 | [GITHUB_ACTIONS_TUTORIAL.md](GITHUB_ACTIONS_TUTORIAL.md) | GitHub Actions CI/CD 가이드 | 중급 | 15분 |
 | [DOCKER_VS_CI_COMPARISON.md](DOCKER_VS_CI_COMPARISON.md) | Docker와 CI/CD 비교 분석 | 중급 | 15분 |
@@ -259,6 +262,7 @@ java -version    # Java 17 필요
 
 | 날짜 | 문서 | 변경 내용 |
 |------|------|----------|
+| 2025-01-01 | POSTGRESQL_JSONB_VS_COLUMN.md | JSONB vs 컬럼 방식 비교 가이드 신규 생성 |
 | 2025-01-01 | NOTIFICATION_ARCHITECTURE_TUTORIAL.md | 알림 시스템 아키텍처 튜토리얼 신규 생성 |
 | 2025-01-01 | CLEAN_ARCHITECTURE_TUTORIAL.md | Clean Architecture 튜토리얼 신규 생성 |
 | 2025-01-01 | SWAGGER_TUTORIAL.md | Swagger/OpenAPI 튜토리얼 신규 생성 |
